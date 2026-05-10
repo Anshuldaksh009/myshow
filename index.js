@@ -3,8 +3,13 @@ const app = express();
 const PORT = 3000;
 const mongoose = require('mongoose');
 const listing = require('./models/testingModel.js')
+const Movies = require("./models/movieModel.js")
+const Shows = require('./models/showModel.js')
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
 //const passport = require('passport');
+
+//const methodOverride = require('method-override');
+
 app.use(express.json());
 
 
@@ -25,28 +30,123 @@ app.get("/listing", async (req, res) => { // Changed to POST for testing data
     console.log('Request received!');
     const { name, father } = req.body;
     console.log(`Name: ${name}, Father: ${father}`);
-   const user = new listing(req.body);
+    const user = new listing(req.body);
 
     const savedUser = await user.save();
- 
- 
+
+
     await new listing(req.body).save();
     res.send({
         status: "Success",
     });
 });
-app.get('/listing/movies', (req, res) => {
-    const { name, father } = req.body
-    console.log("hey i am ", name, " its working ");
 
-    console.log("this version also working ");
-    res.send({
-        status: "siccess"
+//------------------------------------------------------
+//End points of basic APIs for movies search
 
-    })
+
+app.get('/listing/movies/all', async (req, res) => {
+
+    try {
+
+        const movie = Movies.find();
+        console.log('i m awokrig', movie);
+
+        res.send({
+            success: true,
+            message: "movies feteched success fully",
+
+        });
+
+    }
+    catch (err) {
+        console.log('not working');
+
+        res.status(500).send({ success: false, message: err.message });
+    }
+
 
 })
 
+
+app.post('/listing/movies/add',async(req,res)=>{
+console.log('things are working');
+
+    try {
+    const newMovie = new Movie(req.body);
+  console.log(req.body);
+  
+     await newMovie.save();
+    res.status(201).send({
+      success: true,
+      message: "Movie added successfully!",
+    });
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+})
+
+app.get('/listing/movies/:id', async (req, res) => {
+
+    try {
+        const id = req.params.id;
+        const movie = await Movies.findById(id)
+        if (!movie) {
+            return res.status(404).send({ success: false, message: "Movie not found" });
+        }
+
+        console.log('its working ');
+
+        res.status(200).send({
+            success: true,
+            message: "Shows fetched successfully",
+
+        });
+    }
+
+
+    catch (err) {
+        console.log("this is you error", err);
+
+    }
+
+})
+app.get('/listing/movies', async (req, res) => {
+    try {
+        // 1. Extract city and movie from query parameters
+        const { movie, city } = req.query;
+
+        // 2. Find shows matching the movie ID
+        // We use .populate('theater') to get the city info from the theater document
+        const shows = await Show.find({ movie })
+            .populate("movie")
+            .populate("theater");
+
+        // 3. Logic to filter based on City
+        // We check if the populated theater's city matches the requested city
+        const filteredShows = shows.filter((show) => {
+            // Use toLowerCase() to make the search case-insensitive
+            return show.theater.city.toLowerCase() === city.toLowerCase();
+        });
+
+        res.status(200).send({
+            success: true,
+            message: "Shows fetched successfully",
+            data: filteredShows,
+        });
+    }
+    catch (err) {
+        res.status(500).send({
+            success: false,
+            message: err.message,
+        });
+
+    }
+
+})
+
+
+//--------------------------------------------------------------
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
