@@ -1,0 +1,24 @@
+{
+  "name": "myshow",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anshuldaksh009/myshow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Anshuldaksh009/myshow/issues"
+  },
+  "homepage": "https://github.com/Anshuldaksh009/myshow#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongoose": "^9.6.2"
+  }
+}
