@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const listing = require('./models/testingModel.js')
 const Movies = require("./models/movieModel.js")
 const Shows = require('./models/showModel.js')
+const Users = require('./models/userModel.js')
+const bcrypt = require('bcryptjs');
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
 //const passport = require('passport');
 
@@ -69,21 +71,10 @@ app.get('/listing/movies/all', async (req, res) => {
 })
 
 
-app.post('/listing/movies/add',async(req,res)=>{
-console.log('things are working');
+app.post('/listing/movies/add', async (req, res) => {
+    console.log('things are working');
 
-    try {
-    const newMovie = new Movie(req.body);
-  console.log(req.body);
-  
-     await newMovie.save();
-    res.status(201).send({
-      success: true,
-      message: "Movie added successfully!",
-    });
-  } catch (err) {
-    res.status(500).send({ success: false, message: err.message });
-  }
+
 })
 
 app.get('/listing/movies/:id', async (req, res) => {
@@ -144,6 +135,30 @@ app.get('/listing/movies', async (req, res) => {
     }
 
 })
+//---------------------------------------------------------------
+//Register and login  APIs
+app.post('/listing/users/register', async (req, res) => {
+    try {
+        console.log(userDetail);
+        
+        const userExist = await Users.findOne({ email: userDetail.email })
+        
+        if (userExist) {
+            return res.status(400).send({ success: false, message: "User already exists" });
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(userDetail.password, salt)
+        userDetail.password = hashedPassword
+        const newUser = new Users(userDetail);
+        await newUser.save();
+        res.status(201).send({ success: true, message: "Registration successful! Please login." });
+    } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+
+})
+
+app.post('/listing/users')
 
 
 //--------------------------------------------------------------
