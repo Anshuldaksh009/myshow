@@ -12,7 +12,14 @@ const Shows = require('./models/showModel.js')
 
 app.use(express.json());
 
-
+const sessionOptions={
+    secret:"mysuperSecretKey",
+    resave:false,
+    saveUinitialized:true,
+    cookie:{
+        expires:d
+    }
+}
 async function main() {
     //for local db connection await mongoose.connect('mongodb://127.0.0.1:27017/airbnb');
     //   await mongoose.connect(dbUrl)
