@@ -12,8 +12,5 @@ router.post('/add', addMovies);
 router.get('/get-all', getAllMovies);
 router.get('/:id', getMovieById);
 
-module.exports = router;
-
-
 
 module.exports = router;

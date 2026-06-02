@@ -7,9 +7,10 @@ const Movies = require("./models/movieModel.js")
 const Shows = require('./models/showModel.js')
 const Users = require('./models/userModel.js')
 const Theater =require('./models/theaterModel.js')
+const theaterRoute = require('./routes/theaterRoute');
 const bcrypt = require('bcryptjs');
 const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
-
+//const { addTheater, getAllTheaters } = require('../controllers/theaterController');
 const movieRoutes=require('./routes/moviesRoutes.js')
 const showRoutes=require('./routes/showRoutes.js')
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
@@ -36,26 +37,27 @@ app.get('/', (req, res) => {
 
 
 
-app.get("/listing", async (req, res) => { // Changed to POST for testing data
-    console.log('Request received!');
-    const { name, father } = req.body;
-    console.log(`Name: ${name}, Father: ${father}`);
-    const user = new listing(req.body);
+// app.get("/listing", async (req, res) => { // Changed to POST for testing data
+//     console.log('Request received!');
+//     const { name, father } = req.body;
+//     console.log(`Name: ${name}, Father: ${father}`);
+//     const user = new listing(req.body);
 
-    const savedUser = await user.save();
+//     const savedUser = await user.save();
 
 
-    await new listing(req.body).save();
-    res.send({
-        status: "Success",
-    });
-});
+//     await new listing(req.body).save();
+//     res.send({
+//         status: "Success",
+//     });
+// });
 
 //------------------------------------------------------
 //End points of basic APIs for movies search
 
 ///listing/movies/all
 
+app.use('/listing/theaters', theaterRoute);
 app.use('/listing/movies', movieRoutes);
 // app.get('/listing/movies/all', async (req, res) => {
 
