@@ -6,7 +6,12 @@ const listing = require('./models/testingModel.js')
 const Movies = require("./models/movieModel.js")
 const Shows = require('./models/showModel.js')
 const Users = require('./models/userModel.js')
+const Theater =require('./models/theaterModel.js')
 const bcrypt = require('bcryptjs');
+const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
+
+const movieRoutes=require('./routes/moviesRoutes.js')
+const showRoutes=require('./routes/showRoutes.js')
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
 //const passport = require('passport');
 
@@ -28,6 +33,9 @@ app.get('/', (req, res) => {
 });
 
 
+
+
+
 app.get("/listing", async (req, res) => { // Changed to POST for testing data
     console.log('Request received!');
     const { name, father } = req.body;
@@ -46,62 +54,64 @@ app.get("/listing", async (req, res) => { // Changed to POST for testing data
 //------------------------------------------------------
 //End points of basic APIs for movies search
 
+///listing/movies/all
 
-app.get('/listing/movies/all', async (req, res) => {
+app.use('/listing/movies', movieRoutes);
+// app.get('/listing/movies/all', async (req, res) => {
 
-    try {
+//     try {
 
-        const movie = Movies.find();
-        console.log('i m awokrig', movie);
+//         const movie = Movies.find();
+//         console.log('i m awokrig', movie);
 
-        res.send({
-            success: true,
-            message: "movies feteched success fully",
+//         res.send({
+//             success: true,
+//             message: "movies feteched success fully",
 
-        });
+//         });
 
-    }
-    catch (err) {
-        console.log('not working');
+//     }
+//     catch (err) {
+//         console.log('not working');
 
-        res.status(500).send({ success: false, message: err.message });
-    }
-
-
-})
-
-
-app.post('/listing/movies/add', async (req, res) => {
-    console.log('things are working');
+//         res.status(500).send({ success: false, message: err.message });
+//     }
 
 
-})
-
-app.get('/listing/movies/:id', async (req, res) => {
-
-    try {
-        const id = req.params.id;
-        const movie = await Movies.findById(id)
-        if (!movie) {
-            return res.status(404).send({ success: false, message: "Movie not found" });
-        }
-
-        console.log('its working ');
-
-        res.status(200).send({
-            success: true,
-            message: "Shows fetched successfully",
-
-        });
-    }
+// })
 
 
-    catch (err) {
-        console.log("this is you error", err);
+// app.post('/listing/movies/add', async (req, res) => {
+//     console.log('things are working');
 
-    }
 
-})
+// })
+
+// app.get('/listing/movies/:id', async (req, res) => {
+
+//     try {
+//         const id = req.params.id;
+//         const movie = await Movies.findById(id)
+//         if (!movie) {
+//             return res.status(404).send({ success: false, message: "Movie not found" });
+//         }
+
+//         console.log('its working ');
+
+//         res.status(200).send({
+//             success: true,
+//             message: "Shows fetched successfully",
+
+//         });
+//     }
+
+
+//     catch (err) {
+//         console.log("this is you error", err);
+
+//     }
+
+//})
 app.get('/listing/movies', async (req, res) => {
     try {
         // 1. Extract city and movie from query parameters
@@ -157,11 +167,72 @@ app.post('/listing/users/register', async (req, res) => {
     }
 
 })
+//shows route \
+app.get('/listing/shows/all', async (req, res) => {
+    try {
+        const { movie } = req.query; // Get Movie ID from URL params
 
-app.post('/listing/users')
+        const shows = await Shows.find({ movie })
+            .populate('theater') // This replaces the Theater ID with the actual Theater Object
+            .populate('movie');   // This replaces the Movie ID with the actual Movie Object
 
+        res.send({
+            success: true,
+            data: shows
+        });
+    } catch (err) {
+        res.status(500).send({ success: false, message: err.message });
+    }
+});
+//------------------------------------------------
+//Theater route 
+app.post('/listing/theaters/add', async (req, res) => {
+    try {
 
+        const newItem=req.body
+        console.log(newItem);
+        
+        const newTheater = new Theater(newItem);
+        await newTheater.save();
+        res.status(201).send({
+            success: true,
+            message: "Theater added successfully!",
+        });
+    } catch (err) {
+        res.status(500).send({ success: false, message: err.message });
+    }
+});
+app.get('/listing/theaters/get-all', async (req, res) => {
+    try {
+        const theaters = await Theater.find();
+        res.send({
+            success: true,
+            data: theaters
+        });
+    } catch (err) {
+        res.status(500).send({ success: false, message: err.message });
+    }
+});
+app.get('/listing/theaters/')
 //--------------------------------------------------------------
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+});
+
+
+
+// 3. 404 Handler (if no route matched above)
+app.use(notFound);
+
+// 4. Global Error Handler (to catch server crashes)
+app.use(errorHandler);
+
+// At the bottom of server.js, after all other routes
+app.get('/api', (req, res) => {
+    res.status(200).send({
+        success: true,
+        message: "Welcome to the BookMyShow API",
+        version: "1.0.0",
+        status: "Running"
+    });
 });
