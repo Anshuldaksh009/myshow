@@ -1,0 +1,32 @@
+exports.getShows = async (req, res) => {
+    try {
+        const { movie, theater, city } = req.query;
+        let filters = {};
+
+        // 1. If movie ID is provided, filter by movie
+        if (movie) filters.movie = movie;
+
+        // 2. If theater ID is provided, filter by theater
+        if (theater) filters.theater = theater;
+
+        // 3. Execute query with population
+        const shows = await Show.find(filters)
+            .populate('movie')
+            .populate({
+                path: 'theater',
+                // If city is provided, only match theaters in that city
+                match: city ? { city: { $regex: new RegExp(city, "i") } } : {}
+            })
+            .sort({ createdAt: -1 });
+
+        // 4. If filtering by city, remove the "null" matches
+        const finalData = city ? shows.filter(s => s.theater !== null) : shows;
+
+        res.status(200).send({
+            success: true,
+            data: finalData
+        });
+    } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+};

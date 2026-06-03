@@ -18,7 +18,18 @@ const addShow = async (req, res) => {
         res.status(500).send({ success: false, message: error.message });
     }
 };
-
+// 2. DELETE A SHOW (Admin)
+const deleteShow = async (req, res) => {
+    try {
+        await Show.findByIdAndDelete(req.params.id);
+        res.send({
+            success: true,
+            message: "Show deleted successfully!"
+        });
+    } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+};
 // GET ALL SHOWS (With Populated Data)
 const getAllShows = async (req, res) => {
     try {
@@ -36,12 +47,24 @@ const getAllShows = async (req, res) => {
     }
 };
 
-module.exports = { addShow, getAllShows };
 
 
-exports.getShowsByCityAndMovie = async (req, res) => {
+
+const getShowsByCityAndMovie = async (req, res) => {
+  console.log('here things also workng ');
+  
+  
     try {
         const { movie, city } = req.query;
+        console.log(movie ,city);
+        // 1. Validation: If city is missing, stop here and tell the user
+        if (!movie || !city) {
+            return res.status(400).send({
+                success: false,
+                message: "Please provide both movie ID and city name in the URL"
+            });
+        }
+        
         const shows = await Show.find({ movie })
             .populate("movie")
             .populate("theater");
@@ -58,3 +81,25 @@ exports.getShowsByCityAndMovie = async (req, res) => {
         res.status(500).send({ success: false, message: err.message });
     }
 };
+const getShowById = async (req, res) => {
+    try {
+        const reqId= req.params.id
+         if (!reqID) {
+            return res.status(400).send({
+                success: false,
+                message: "there is something wrong in the requested URL"
+            });
+        }
+        const show = await Show.findById(reqId)
+            .populate("movie")
+            .populate("theater");
+            
+        res.status(200).send({
+            success: true,
+            data: show
+        });
+    } catch (err) {
+        res.status(500).send({ success: false, message: err.message });
+    }
+};
+module.exports = { deleteShow,addShow, getAllShows ,getShowById,getShowsByCityAndMovie};

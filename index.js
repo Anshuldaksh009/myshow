@@ -15,8 +15,9 @@ const movieRoutes=require('./routes/moviesRoutes.js')
 const showRoutes=require('./routes/showRoutes.js')
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
 //const passport = require('passport');
-
+const dbUrl='mongodb://127.0.0.1:27017/myshow'
 //const methodOverride = require('method-override');
+const morgan = require('morgan');
 
 app.use(express.json());
 
@@ -24,7 +25,7 @@ app.use(express.json());
 async function main() {
     //for local db connection await mongoose.connect('mongodb://127.0.0.1:27017/airbnb');
     //   await mongoose.connect(dbUrl)
-    await mongoose.connect('mongodb://127.0.0.1:27017/myshow');
+    await mongoose.connect(dbUrl);
 
     console.log('MongoDB connected');
 }
@@ -35,8 +36,14 @@ app.get('/', (req, res) => {
 
 
 
-
-
+app.use((req, res, next) => {
+    console.log(`Incoming Request: ${req.method} ${req.url}`);
+    next();
+});
+app.use(morgan('dev'));
+app.use('/listing/shows',showRoutes)
+app.use('/listing/theaters', theaterRoute);
+app.use('/listing/movies', movieRoutes);
 // app.get("/listing", async (req, res) => { // Changed to POST for testing data
 //     console.log('Request received!');
 //     const { name, father } = req.body;
@@ -57,8 +64,6 @@ app.get('/', (req, res) => {
 
 ///listing/movies/all
 
-app.use('/listing/theaters', theaterRoute);
-app.use('/listing/movies', movieRoutes);
 // app.get('/listing/movies/all', async (req, res) => {
 
 //     try {
@@ -114,39 +119,39 @@ app.use('/listing/movies', movieRoutes);
 //     }
 
 //})
-app.get('/listing/movies', async (req, res) => {
-    try {
-        // 1. Extract city and movie from query parameters
-        const { movie, city } = req.query;
+// app.get('/listing/movies', async (req, res) => {
+//     try {
+//         // 1. Extract city and movie from query parameters
+//         const { movie, city } = req.query;
 
-        // 2. Find shows matching the movie ID
-        // We use .populate('theater') to get the city info from the theater document
-        const shows = await Show.find({ movie })
-            .populate("movie")
-            .populate("theater");
+//         // 2. Find shows matching the movie ID
+//         // We use .populate('theater') to get the city info from the theater document
+//         const shows = await Show.find({ movie })
+//             .populate("movie")
+//             .populate("theater");
 
-        // 3. Logic to filter based on City
-        // We check if the populated theater's city matches the requested city
-        const filteredShows = shows.filter((show) => {
-            // Use toLowerCase() to make the search case-insensitive
-            return show.theater.city.toLowerCase() === city.toLowerCase();
-        });
+//         // 3. Logic to filter based on City
+//         // We check if the populated theater's city matches the requested city
+//         const filteredShows = shows.filter((show) => {
+//             // Use toLowerCase() to make the search case-insensitive
+//             return show.theater.city.toLowerCase() === city.toLowerCase();
+//         });
 
-        res.status(200).send({
-            success: true,
-            message: "Shows fetched successfully",
-            data: filteredShows,
-        });
-    }
-    catch (err) {
-        res.status(500).send({
-            success: false,
-            message: err.message,
-        });
+//         res.status(200).send({
+//             success: true,
+//             message: "Shows fetched successfully",
+//             data: filteredShows,
+//         });
+//     }
+//     catch (err) {
+//         res.status(500).send({
+//             success: false,
+//             message: err.message,
+//         });
 
-    }
+//     }
 
-})
+// })
 //---------------------------------------------------------------
 //Register and login  APIs
 app.post('/listing/users/register', async (req, res) => {
@@ -187,35 +192,35 @@ app.get('/listing/shows/all', async (req, res) => {
     }
 });
 //------------------------------------------------
-//Theater route 
-app.post('/listing/theaters/add', async (req, res) => {
-    try {
+// //Theater route 
+// app.post('/listing/theaters/add', async (req, res) => {
+//     try {
 
-        const newItem=req.body
-        console.log(newItem);
+//         const newItem=req.body
+//         console.log(newItem);
         
-        const newTheater = new Theater(newItem);
-        await newTheater.save();
-        res.status(201).send({
-            success: true,
-            message: "Theater added successfully!",
-        });
-    } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-    }
-});
-app.get('/listing/theaters/get-all', async (req, res) => {
-    try {
-        const theaters = await Theater.find();
-        res.send({
-            success: true,
-            data: theaters
-        });
-    } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-    }
-});
-app.get('/listing/theaters/')
+//         const newTheater = new Theater(newItem);
+//         await newTheater.save();
+//         res.status(201).send({
+//             success: true,
+//             message: "Theater added successfully!",
+//         });
+//     } catch (err) {
+//         res.status(500).send({ success: false, message: err.message });
+//     }
+// });
+// app.get('/listing/theaters/get-all', async (req, res) => {
+//     try {
+//         const theaters = await Theater.find();
+//         res.send({
+//             success: true,
+//             data: theaters
+//         });
+//     } catch (err) {
+//         res.status(500).send({ success: false, message: err.message });
+//     }
+// });
+// app.get('/listing/theaters/')
 //--------------------------------------------------------------
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
@@ -230,7 +235,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // At the bottom of server.js, after all other routes
-app.get('/api', (req, res) => {
+app.get('/listing', (req, res) => {
     res.status(200).send({
         success: true,
         message: "Welcome to the BookMyShow API",
