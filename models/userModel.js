@@ -1,31 +1,29 @@
 const mongoose = require('mongoose');
 
-const passportLocalMongoose =
-require('passport-local-mongoose').default;
-
 const userSchema = new mongoose.Schema({
-
     name: {
         type: String,
         required: true
     },
-
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        lowercase: true,
+        trim: true
     },
-
+    password: {
+        type: String,
+        required: true,
+        minlength: 6 
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],
         default: 'user'
     }
-
 }, { timestamps: true });
 
-userSchema.plugin(passportLocalMongoose, {
-    usernameField: 'email'
-});
+// how to handle tokens and local storage in React.
 
 module.exports = mongoose.model('User', userSchema);
