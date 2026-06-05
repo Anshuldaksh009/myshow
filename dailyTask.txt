@@ -1,2 +1,8 @@
 4june 2026 implemented 
 validated id to cross check id validation
+
+
+
+5 june 
+Added the functionality of register and login 
+validateUser middleware  implemented

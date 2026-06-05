@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
         // 3. Generate JWT Token (Their digital ID card)
         const token = jwt.sign(
             { userId: user._id, role: user.role },
-            "SUPER_SECRET_KEY_123", // Keep this safe in your .env file later
+           process.env.JWT_SECRET, // Keep this safe in your .env file later
             { expiresIn: '1d' } // Token expires in 1 day
         );
 
