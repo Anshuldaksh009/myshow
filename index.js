@@ -13,6 +13,8 @@ const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
 //const { addTheater, getAllTheaters } = require('../controllers/theaterController');
 const movieRoutes=require('./routes/moviesRoutes.js')
 const showRoutes=require('./routes/showRoutes.js')
+const userRoutes = require('./routes/userRoutes');
+
 //const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
 //const passport = require('passport');
 const dbUrl='mongodb://127.0.0.1:27017/myshow'
@@ -41,6 +43,9 @@ app.use((req, res, next) => {
     next();
 });
 app.use(morgan('dev'));
+
+// Base path for all authentication requests
+app.use('/listing/users', userRoutes);
 app.use('/listing/shows',showRoutes)
 app.use('/listing/theaters', theaterRoute);
 app.use('/listing/movies', movieRoutes);
