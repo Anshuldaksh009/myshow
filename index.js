@@ -37,7 +37,7 @@ async function main() {
 }
 main().catch(err => console.log(err));
 app.get('/', (req, res) => {
-    res.redirect("/listing");
+    res.redirect("/listing/movies/get-all");
 });
 
 
