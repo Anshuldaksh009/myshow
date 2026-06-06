@@ -43,7 +43,7 @@ app.get('/', (req, res) => {
 
 
 app.use((req, res, next) => {
-    console.log(`Incoming Request: ${req.method} ${req.url}`);
+    console.log(`Incoming Request: ${req.method}http://localhost:3000 ${req.url}`);
     next();
 });
 app.use(morgan('dev'));
