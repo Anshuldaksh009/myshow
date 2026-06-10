@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 // --- REGISTER CONTROLLER ---
 exports.register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password ,role} = req.body;
 
         console.log(req.body);
         
@@ -28,7 +28,8 @@ exports.register = async (req, res) => {
         const newUser = new User({
             name,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            role
         });
 
         await newUser.save();
@@ -66,10 +67,11 @@ exports.login = async (req, res) => {
            process.env.JWT_SECRET, // Keep this safe in your .env file later
             { expiresIn: '1d' } // Token expires in 1 day
         );
+console.log( "authController working");
 
         res.status(200).send({
             success: true,
-            message: "Login successful!",
+            message: "Login successful! pass the token successfully",
             data: token // The frontend will save this token
         });
 

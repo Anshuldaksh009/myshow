@@ -55,6 +55,8 @@ const getMovieById=async (req, res,next) => {
 }
 
 const addMovies=async (req,res,next) => {
+    console.log("i m here add movie");
+    
     try{
         const addNewMovie=req.body
         console.log("here is  your movie ", addNewMovie);
@@ -63,7 +65,7 @@ const addMovies=async (req,res,next) => {
         await newMovie.save();
         res.status(201).send({ success: true, message: "Movie added!" });
     }catch (err) {
-        res.status(500).send({ success: false, message: err.message });
+        res.status(500).send({ success: false, message: "not working" });
     }
 }
 

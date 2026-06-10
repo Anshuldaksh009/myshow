@@ -6,3 +6,8 @@ validated id to cross check id validation
 5 june 
 Added the functionality of register and login 
 validateUser middleware  implemented
+
+
+8th june 
+implemented authuentication for token but we wont use it now
+we have to work its need to time verify token  

@@ -6,9 +6,11 @@ const Users = require('../models/userModel.js')
 const validateId=require('../middlewares/validateId.js')
 //addMovies,getMoviesById,getAllMovies
 
+const  adminMiddleware=require('../middlewares/adminMiddleware.js')
 const router = require('express').Router();
 const { addMovies, getAllMovies, getMovieById } = require('../controllers/moviesController');
-router.post('/add', addMovies);
+const authMiddleware = require('../middlewares/authMiddleware.js');
+router.post('/add',authMiddleware,adminMiddleware, addMovies);
 router.get('/get-all', getAllMovies);
 router.get('/:id',validateId, getMovieById);
 

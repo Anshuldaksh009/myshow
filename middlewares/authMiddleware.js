@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-
+require('dotenv').config(); 
+// this middleware to check the validity of user  is he login or not 
 module.exports = (req, res, next) => {
     try {
         // 1. Extract the token from the 'Authorization' header
@@ -14,6 +15,7 @@ module.exports = (req, res, next) => {
 
         // Split "Bearer <token_string>" and take index 1
         const token = authHeader.split(' ')[1];
+console.log("we are working here in authmiddleware");
 
         // 2. Verify token using your environment variable
         const decryptedToken = jwt.verify(token, process.env.JWT_SECRET);
@@ -26,6 +28,8 @@ module.exports = (req, res, next) => {
         next();
 
     } catch (error) {
+        console.log("❌ JWT VERIFICATION ERROR DETAILS:", error.message);
+    console.log("🔑 USED SECRET KEY VALUE:", process.env.JWT_SECRET);
         return res.status(401).send({
             success: false,
             message: "Session expired or invalid token. Please log in again."
