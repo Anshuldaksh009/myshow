@@ -3,6 +3,8 @@
 
 module.exports = (req, res, next) => {
     try {
+        console.log(req.body);
+        
         // req.body.userRole was safely attached by your authMiddleware earlier!
         if (req.body.userRole !== 'admin') {
             return res.status(403).send({
@@ -15,6 +17,6 @@ module.exports = (req, res, next) => {
         next();
 
     } catch (error) {
-        res.status(500).send({ success: false, message: error.message });
+        res.status(500).send({ success: false, message: error.message +"problem in admin middleware" });
     }
 };

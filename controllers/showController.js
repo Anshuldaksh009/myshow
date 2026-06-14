@@ -7,6 +7,8 @@ const Theater =require('../models/theaterModel.js')
 
 // CREATE A SHOW
 const addShow = async (req, res) => {
+    console.log('add show working');
+    
     try {
         const newShow = new Show(req.body);
         await newShow.save();

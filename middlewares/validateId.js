@@ -13,5 +13,7 @@ module.exports = (req, res, next) => {
             message: "Invalid ID format  where provided."
         });
     }
+    console.log("validate id middleware working");
+    
     next(); // Move to the controller
 };
