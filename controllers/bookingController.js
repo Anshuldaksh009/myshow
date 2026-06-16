@@ -5,6 +5,7 @@ exports.makeBooking = async (req, res) => {
     try {
         const { showId, seats, transactionId, userId } = req.body; 
         // req.body.userId is automatically supplied by your authMiddleware
+console.log(req.body);
 
         // 1. Fetch the scheduled show
         const show = await Show.findById(showId);
@@ -51,11 +52,22 @@ exports.makeBooking = async (req, res) => {
 exports.cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.body; // The frontend passes the booking record ID
-
+const currentUserId = req.body.userId;
         // 1. Locate the booking record
         const booking = await Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).send({ success: false, message: "Booking not found." });
+        }
+        // 2. 🛡️ THE SECURITY CHECK (PRIVEDGE VERIFICATION):
+        // Ensure the person trying to cancel is either the owner of the ticket OR an admin
+        const isTicketOwner = booking.user.toString() === currentUserId;
+        const isAdmin = req.body.userRole === 'admin';
+
+        if (!isTicketOwner && !isAdmin) {
+            return res.status(403).send({
+                success: false,
+                message: "Authorization Error: You do not have permission to cancel someone else's ticket."
+            });
         }
 
         // 2. Prevent double cancellations
