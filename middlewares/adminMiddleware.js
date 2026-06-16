@@ -5,7 +5,7 @@ module.exports = (req, res, next) => {
     try {
         console.log(req.body);
         
-        // req.body.userRole was safely attached by your authMiddleware earlier!
+      //  req.body.userRole was safely attached by your authMiddleware earlier!
         if (req.body.userRole !== 'admin') {
             return res.status(403).send({
                 success: false,
@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
             });
         }
 
-        // If they are an admin, let them pass to the controller
+        //If they are an admin, let them pass to the controller
         next();
 
     } catch (error) {

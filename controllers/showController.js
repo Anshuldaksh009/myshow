@@ -17,7 +17,7 @@ const addShow = async (req, res) => {
             message: "Show added successfully!"
         });
     } catch (error) {
-        res.status(500).send({ success: false, message: error.message });
+        res.status(500).send({ success: false, message: error.message +"problem"});
     }
 };
 // 2. DELETE A SHOW (Admin)

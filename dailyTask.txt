@@ -11,3 +11,8 @@ validateUser middleware  implemented
 8th june 
 implemented authuentication for token but we wont use it now
 we have to work its need to time verify token  
+
+ {
+    "email":"anshulDaksh009@gmail.com",
+    "password": "Daksh@123"
+  }
