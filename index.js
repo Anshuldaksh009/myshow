@@ -1,7 +1,7 @@
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
-
+const cors = require('cors');
 const express = require("express");
 const app = express();
 const PORT = 3000;
@@ -24,6 +24,10 @@ const bookingRoutes=require('./routes/bookingRoutes.js')
 const dbUrl='mongodb://127.0.0.1:27017/myshow'
 //const methodOverride = require('method-override');
 const morgan = require('morgan');
+app.use(cors({
+    origin: 'http://localhost:5173', // Your React app's URL
+    credentials: true
+}));
 
 app.use(express.json());
 
