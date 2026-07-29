@@ -31,7 +31,7 @@ app.use(cors({
 
 app.use(express.json());
 
-
+app.disable('etag'); // 👈 Disables 304 caching so fresh data is always sent!
 async function main() {
     //for local db connection await mongoose.connect('mongodb://127.0.0.1:27017/airbnb');
     //   await mongoose.connect(dbUrl)
@@ -54,10 +54,10 @@ app.use(morgan('dev'));
 
 // Base path for all authentication requests
 app.use('/listing/users', userRoutes);
+app.use('/listing/movies', movieRoutes);
 app.use('/listing/booking',bookingRoutes)
 app.use('/listing/shows',showRoutes)
 app.use('/listing/theaters', theaterRoute);
-app.use('/listing/movies', movieRoutes);
 //--------------------------------------------------------------
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);

@@ -1,161 +1,93 @@
 const mongoose = require('mongoose');
-const express=require('express')
-const Movies = require("../models/movieModel.js")
-const Shows = require('../models/showModel.js')
-const Users = require('../models/userModel.js')
-const router=express.Router();
+const Movies = require("../models/movieModel.js");
+const Shows = require('../models/showModel.js');
+const getAllMovies = async (req, res) => {
+  try {
+    const { city } = req.query;
+    console.log("➡️ [BACKEND] City requested:", city);
 
-
- const getAllMovies=async (req,res,next) => {
-      try {
-
-        const movie = await Movies.find();
-        console.log('i m awokrig', movie);
-                         
-        res.send({
-            success: true,
-            message: "movies feteched success fully",
-
-        });
-
-    }
-    catch (err) {
-        console.log('not working');
-
-        res.status(500).send({ success: false, message: err.message });
+    if (!city) {
+      const movies = await Movies.find();
+      console.log("➡️ [BACKEND] Returning all movies count:", movies.length);
+      return res.status(200).json({ success: true, data: movies });
     }
 
- 
+    const showsInCity = await Shows.find()
+      .populate({
+        path: 'theater',
+        match: { city: new RegExp(`^${city}$`, 'i') }
+      })
+      .populate('movie');
 
-}
-const getMovieById=async (req, res,next) => {
+    console.log("➡️ [BACKEND] Raw shows found in DB:", showsInCity.length);
 
-    try {
-        const id = req.params.id;
-        const movie = await Movies.findById(id)
-        if (!movie) {
-            return res.status(404).send({ success: false, message: "Movie not found" });
-        }
+    const validShows = showsInCity.filter((show) => show.theater !== null);
+    console.log("➡️ [BACKEND] Shows matching city:", validShows.length);
 
-        console.log('its working ');
+    const movieMap = new Map();
+    validShows.forEach((show) => {
+      if (show.movie && show.movie._id) {
+        movieMap.set(show.movie._id.toString(), show.movie);
+      }
+    });
 
-        res.status(200).send({
-            success: true,
-            message: "Shows fetched successfully",
+    const cityMovies = Array.from(movieMap.values());
+    console.log("➡️ [BACKEND] Unique movies returning to frontend:", cityMovies.length);
 
-        });
+    return res.status(200).json({
+      success: true,
+      data: cityMovies
+    });
+  } catch (err) {
+    console.error("❌ [BACKEND ERROR]:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+// GET MOVIE BY ID
+const getMovieById = async (req, res, next) => {
+  console.log("request get in backened in getmoviebyid");
+  
+  try {
+    const id = req.params.id;
+    const movie = await Movies.findById(id);
+console.log("getMovieByid  2nd check point");
+
+    if (!movie) {
+      console.log("error check point");
+      
+      return res.status(404).json({ success: false, message: "Movie not found" });
     }
 
-
-    catch (err) {
-        console.log("this is you error", err);
-
-    }
-
-}
-
-const addMovies=async (req,res,next) => {
-    console.log("i m here add movie");
+    return res.status(200).json({
+      success: true,
+      message: "Movie fetched successfully",
+      data: movie // 👈 Added missing movie data payload
+    });
+  } catch (err) {
+    console.log("finall error checkpoint");
     
-    try{
-        const addNewMovie=req.body
-        console.log("here is  your movie ", addNewMovie);
-        
-        const newMovie=new Movies(addNewMovie);
-        await newMovie.save();
-        res.status(201).send({ success: true, message: "Movie added!" });
-    }catch (err) {
-        res.status(500).send({ success: false, message: "not working" });
-    }
-}
+    console.error("Error in getMovieById:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
+// ADD NEW MOVIE
+const addMovies = async (req, res, next) => {
+  try {
+    const addNewMovie = req.body;
+    const newMovie = new Movies(addNewMovie);
+    await newMovie.save();
 
-module.exports={addMovies,getMovieById,getAllMovies}
-// app.get('/listing/movies/all', async (req, res) => {
+    return res.status(201).json({ 
+      success: true, 
+      message: "Movie added successfully!" 
+    });
+  } catch (err) {
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || "Failed to add movie" 
+    });
+  }
+};
 
-//     try {
-
-//         const movie = Movies.find();
-//         console.log('i m awokrig', movie);
-
-//         res.send({
-//             success: true,
-//             message: "movies feteched success fully",
-
-//         });
-
-//     }
-//     catch (err) {
-//         console.log('not working');
-
-//         res.status(500).send({ success: false, message: err.message });
-//     }
-
-
-// })
-
-
-// app.post('/listing/movies/add', async (req, res) => {
-//     console.log('things are working');
-
-
-// })
-
-// app.get('/listing/movies/:id', async (req, res) => {
-
-//     try {
-//         const id = req.params.id;
-//         const movie = await Movies.findById(id)
-//         if (!movie) {
-//             return res.status(404).send({ success: false, message: "Movie not found" });
-//         }
-
-//         console.log('its working ');
-
-//         res.status(200).send({
-//             success: true,
-//             message: "Shows fetched successfully",
-
-//         });
-//     }
-
-
-//     catch (err) {
-//         console.log("this is you error", err);
-
-//     }
-
-// // })
-// app.get('/listing/movies', async (req, res) => {
-//     try {
-//         // 1. Extract city and movie from query parameters
-//         const { movie, city } = req.query;
-
-//         // 2. Find shows matching the movie ID
-//         // We use .populate('theater') to get the city info from the theater document
-//         const shows = await Show.find({ movie })
-//             .populate("movie")
-//             .populate("theater");
-
-//         // 3. Logic to filter based on City
-//         // We check if the populated theater's city matches the requested city
-//         const filteredShows = shows.filter((show) => {
-//             // Use toLowerCase() to make the search case-insensitive
-//             return show.theater.city.toLowerCase() === city.toLowerCase();
-//         });
-
-//         res.status(200).send({
-//             success: true,
-//             message: "Shows fetched successfully",
-//             data: filteredShows,
-//         });
-//     }
-//     catch (err) {
-//         res.status(500).send({
-//             success: false,
-//             message: err.message,
-//         });
-
-//     }
-
-// })
+module.exports = { addMovies, getMovieById, getAllMovies };

@@ -1,18 +1,26 @@
-const mongoose = require('mongoose');
-const express=require('express')
-const Movies = require('../models/movieModel.js')
-const Shows = require('../models/showModel.js')
-const Users = require('../models/userModel.js')
-const validateId=require('../middlewares/validateId.js')
-//addMovies,getMoviesById,getAllMovies
+const express = require('express');
+const router = express.Router();
 
-const  adminMiddleware=require('../middlewares/adminMiddleware.js')
-const router = require('express').Router();
-const { addMovies, getAllMovies, getMovieById } = require('../controllers/moviesController');
+// Middlewares
 const authMiddleware = require('../middlewares/authMiddleware.js');
-router.post('/add',authMiddleware,adminMiddleware, addMovies);
-router.get('/get-all', getAllMovies);
-router.get('/:id',validateId, getMovieById);
+const adminMiddleware = require('../middlewares/adminMiddleware.js');
+const validateId = require('../middlewares/validateId.js');
 
+// Controller Functions (ensure file name matches: moviesController.js)
+const { addMovies, getAllMovies, getMovieById } = require('../controllers/moviesController.js');
+
+// 🎬 MOVIE ROUTES
+
+// 1. Get all movies (Supports optional ?city=CityName query filtering)
+// Public route - anyone can view available movies
+router.get('/get-all', getAllMovies);
+
+// 2. Get single movie details by ID
+// Public route with ID validation middleware
+router.get('/:id', validateId, getMovieById);
+
+// 3. Add new movie
+// Protected route - requires both user authentication & admin authorization
+router.post('/add', authMiddleware, adminMiddleware, addMovies);
 
 module.exports = router;

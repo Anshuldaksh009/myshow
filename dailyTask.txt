@@ -23,3 +23,18 @@ we have to work its need to time verify token
  ,   "password": "Pratik123"
 ,"role": "admin"
 }
+
+
+ansulpro@123
+ansulpro@123gmail.com
+12345678
+user
+
+
+
+
+
+
+anshul@123gmail.com
+12345678
+admin

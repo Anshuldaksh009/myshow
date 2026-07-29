@@ -68,13 +68,17 @@ exports.login = async (req, res) => {
             { expiresIn: '1d' } // Token expires in 1 day
         );
 console.log( "authController working");
-
-        res.status(200).send({
-            success: true,
-            message: "Login successful! pass the token successfully",
-            data: token // The frontend will save this token
-        });
-
+return res.status(200).send({
+      success: true,
+      message: 'Login successful',
+      data: token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
     } catch (error) {
         res.status(500).send({ success: false, message: error.message });
     }

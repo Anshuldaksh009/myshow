@@ -10,14 +10,16 @@ const authMiddleware=require('../middlewares/authMiddleware.js')
 const  adminMiddleware=require('../middlewares/adminMiddleware.js')
 console.log('i am getting requests');
 
-router.post('/add-show', authMiddleware, adminMiddleware, showController.addShow);
-// ✅ Add authMiddleware right before adminMiddleware
-router.delete('/delete-show/:id', validateId, authMiddleware, adminMiddleware, showController.deleteShow);
-router.get('/filter-shows', showController.getShowsByCityAndMovie);
+const { addShow, deleteShow, getAllShows, getShowById, getShowsByCityAndMovie } = require('../controllers/showController');
 
-router.get('/get-show-by-id/:id',validateId, showController.getShowById);
+router.post('/add-show', addShow);
+router.delete('/delete-show/:id', deleteShow);
+router.get('/get-all-shows', getAllShows);
 
-router.get('/get-all-shows-by-movie',showController.getShowsByCityAndMovie)
+// 👈 Route for movie/city show filtering
+router.get('/get-shows-by-city-and-movie', getShowsByCityAndMovie);
+router.get('/get-all-shows-by-movie/:movieId', getShowsByCityAndMovie); // Supports both route styles!
 
+router.get('/get-show-by-id/:id', getShowById);
 
 module.exports = router;
