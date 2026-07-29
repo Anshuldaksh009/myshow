@@ -49,8 +49,8 @@ exports.sendOtp = async (req, res) => {
 
    // Inside sendOtp in authController.js:
 const mailOptions = {
-  from: `"BookMyShow" <${process.env.EMAIL_USER}>`, // 👈 MUST BE YOUR AUTHENTICATED EMAIL
-  to: email, // 👈 The email entered in the Signup form
+  from: `"myshow" <${process.env.EMAIL_USER}>`, // 👈 MUST match EMAIL_USER
+  to: email, // 👈 The recipient address entered in the form
   subject: '🔑 Your Verification Code for BookMyShow',
   html: `
     <div style="font-family: Arial, sans-serif; padding: 20px;">

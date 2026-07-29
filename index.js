@@ -1,10 +1,11 @@
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
+const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 const express = require("express");
 const app = express();
-const PORT = 3000;
+
 const mongoose = require('mongoose');
 const listing = require('./models/testingModel.js')
 const Movies = require("./models/movieModel.js")
@@ -19,10 +20,11 @@ const movieRoutes=require('./routes/moviesRoutes.js')
 const showRoutes=require('./routes/showRoutes.js')
 const userRoutes = require('./routes/userRoutes');
 const bookingRoutes=require('./routes/bookingRoutes.js')
-//const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
-//const passport = require('passport');
-const dbUrl='mongodb://127.0.0.1:27017/myshow'
-//const methodOverride = require('method-override');
+const MongoStore = require('connect-mongo'); //  CORRECT//for store session on cloud
+//const PORTpassport = require('passport');
+//const dbUrl='mongodb://127.0.0.1:27017/myshow'
+//const methodOverride = require('method-override');\
+const mongodbUrl=process.env.MONGODB_URI
 const morgan = require('morgan');
 app.use(cors({
     origin: 'http://localhost:5173', // Your React app's URL
@@ -35,7 +37,7 @@ app.disable('etag'); // 👈 Disables 304 caching so fresh data is always sent!
 async function main() {
     //for local db connection await mongoose.connect('mongodb://127.0.0.1:27017/airbnb');
     //   await mongoose.connect(dbUrl)
-    await mongoose.connect(dbUrl);
+    await mongoose.connect(mongodbUrl);
 
     console.log('MongoDB connected');
 }
@@ -59,10 +61,10 @@ app.use('/listing/booking',bookingRoutes)
 app.use('/listing/shows',showRoutes)
 app.use('/listing/theaters', theaterRoute);
 //--------------------------------------------------------------
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
 
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 
 // 3. 404 Handler (if no route matched above)

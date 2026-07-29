@@ -45,7 +45,7 @@ const makeBooking = async (req, res) => {
 
     return res.status(200).send({
       success: true,
-      message: '🎉 Booking successful!',
+      message: 'Booking successful!',
       data: newBooking,
     });
   } catch (error) {
