@@ -1,10 +1,10 @@
-const router = require('express').Router();
-const bookingController = require('../controllers/bookingController');
+const express = require('express');
+const router = express.Router();
+const { makeBooking, getUserBookings, cancelBooking } = require('../controllers/bookingController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const validateId = require('../middlewares/validateId');
 
-// To place a booking, you must be logged in
-router.post('/make-booking',validateId, authMiddleware, bookingController.makeBooking);
-// To cancel a ticket, the user must provide a valid bookingId and be logged in
-router.post('/cancel-booking', validateId, authMiddleware, bookingController.cancelBooking);
+router.post('/make-booking', authMiddleware, makeBooking);
+router.get('/get-user-bookings/:userId', authMiddleware, getUserBookings);
+router.post('/cancel-booking', authMiddleware, cancelBooking); // 👈 Added Cancellation Route
+
 module.exports = router;

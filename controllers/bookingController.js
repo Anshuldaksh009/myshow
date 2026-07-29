@@ -1,102 +1,164 @@
 const Booking = require('../models/bookingModel');
 const Show = require('../models/showModel');
 
-exports.makeBooking = async (req, res) => {
-    try {
-        const { showId, seats, transactionId, userId } = req.body; 
-        // req.body.userId is automatically supplied by your authMiddleware
-console.log(req.body);
+// 1. MAKE BOOKING & OCCUPY SEATS (After Payment)
+const makeBooking = async (req, res) => {
+  try {
+    const { showId, seats, totalAmount, transactionId } = req.body;
+    const userId = req.user?._id || req.body.userId;
 
-        // 1. Fetch the scheduled show
-        const show = await Show.findById(showId);
-        if (!show) {
-            return res.status(404).send({ success: false, message: "Show not found." });
-        }
-
-        // 2. CONCURRENCY CHECK: Verify none of the selected seats are already taken
-        const isAnySeatAlreadyBooked = seats.some(seat => show.bookedSeats.includes(seat));
-        if (isAnySeatAlreadyBooked) {
-            return res.status(400).send({ 
-                success: false, 
-                message: "One or more selected seats have already been taken. Please refresh." 
-            });
-        }
-
-        // 3. Update the Show document to register the newly booked seats
-        const updatedSeats = [...show.bookedSeats, ...seats];
-        await Show.findByIdAndUpdate(showId, { bookedSeats: updatedSeats });
-
-        // 4. Create the booking receipt with your default 'booked' status
-        const newBooking = new Booking({
-            show: showId,
-            user: userId,
-            seats: seats,
-            transactionId: transactionId,
-            status: 'booked' // Aligns with your enum!
-        });
-
-        await newBooking.save();
-
-        res.status(201).send({
-            success: true,
-            message: "Tickets successfully booked! Enjoy your movie.",
-            data: newBooking
-        });
-
-    } catch (error) {
-        res.status(500).send({ success: false, message: error.message });
+    if (!showId || !seats || seats.length === 0) {
+      return res.status(400).send({
+        success: false,
+        message: 'Show ID and selected seats are required.',
+      });
     }
+
+    const show = await Show.findById(showId);
+    if (!show) {
+      return res.status(404).send({ success: false, message: 'Show not found.' });
+    }
+
+    // Check if any selected seat is ALREADY booked
+    const alreadyBooked = seats.some((seat) => show.bookedSeats.includes(seat));
+    if (alreadyBooked) {
+      return res.status(400).send({
+        success: false,
+        message: 'One or more selected seats have already been booked by someone else!',
+      });
+    }
+
+    // Create Booking Record
+    const newBooking = new Booking({
+      user: userId,
+      show: showId,
+      seats,
+      totalAmount,
+      transactionId: transactionId || `TXN_${Date.now()}`,
+    });
+
+    await newBooking.save();
+
+    // Mark seats as booked in Show model
+    show.bookedSeats = [...show.bookedSeats, ...seats];
+    await show.save();
+
+    return res.status(200).send({
+      success: true,
+      message: '🎉 Booking successful!',
+      data: newBooking,
+    });
+  } catch (error) {
+    console.error('Error in makeBooking:', error);
+    return res.status(500).send({
+      success: false,
+      message: error.message || 'Server error processing booking.',
+    });
+  }
 };
 
+// 2. GET BOOKINGS FOR LOGGED-IN USER
+const getUserBookings = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.params.userId;
 
-exports.cancelBooking = async (req, res) => {
-    try {
-        const { bookingId } = req.body; // The frontend passes the booking record ID
-const currentUserId = req.body.userId;
-        // 1. Locate the booking record
-        const booking = await Booking.findById(bookingId);
-        if (!booking) {
-            return res.status(404).send({ success: false, message: "Booking not found." });
-        }
-        // 2. 🛡️ THE SECURITY CHECK (PRIVEDGE VERIFICATION):
-        // Ensure the person trying to cancel is either the owner of the ticket OR an admin
-        const isTicketOwner = booking.user.toString() === currentUserId;
-        const isAdmin = req.body.userRole === 'admin';
+    const bookings = await Booking.find({ user: userId })
+      .populate({
+        path: 'show',
+        populate: ['movie', 'theater'],
+      })
+      .sort({ createdAt: -1 });
 
-        if (!isTicketOwner && !isAdmin) {
-            return res.status(403).send({
-                success: false,
-                message: "Authorization Error: You do not have permission to cancel someone else's ticket."
-            });
-        }
+    return res.status(200).send({
+      success: true,
+      data: bookings,
+    });
+  } catch (error) {
+    console.error('Error in getUserBookings:', error);
+    return res.status(500).send({ success: false, message: error.message });
+  }
+};
 
-        // 2. Prevent double cancellations
-        if (booking.status === 'cancelled') {
-            return res.status(400).send({ success: false, message: "This booking is already cancelled." });
-        }
+// 3. CANCEL BOOKING & FREE UP SEATS (With Expiration Check)
+const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+    const userId = req.user?._id || req.body.userId;
 
-        // 3. 🎯 WHERE WE UPDATE & OPEN THE SEATS:
-        const show = await Show.findById(booking.show);
-        if (show) {
-            // Filter out the seats belonging to this booking from the show's master list
-            const remainingSeats = show.bookedSeats.filter(
-                (seat) => !booking.seats.includes(seat)
-            );
-            
-            // Save the newly cleared array back to the Show document
-            await Show.findByIdAndUpdate(booking.show, { bookedSeats: remainingSeats });
-        }
-
-        // 4. Update the receipt status to 'cancelled'
-        booking.status = 'cancelled';
-        await booking.save();
-
-        res.status(200).send({
-            success: true,
-            message: "Booking successfully cancelled. Seats are now open for booking!"
-        });
-
-    } catch (error) {
-        res.status(500).send({ success: false, message: error.message });
+    if (!bookingId) {
+      return res.status(400).send({
+        success: false,
+        message: 'Booking ID is required.',
+      });
     }
+
+    // A. Find Booking
+    const booking = await Booking.findById(bookingId).populate('show');
+    if (!booking) {
+      return res.status(404).send({
+        success: false,
+        message: 'Booking record not found.',
+      });
+    }
+
+    // B. Check Ownership (Optional Safety Check)
+    if (userId && booking.user.toString() !== userId.toString()) {
+      return res.status(403).send({
+        success: false,
+        message: 'Unauthorized: You can only cancel your own bookings.',
+      });
+    }
+
+    // C. Check if already cancelled
+    if (booking.status === 'CANCELLED') {
+      return res.status(400).send({
+        success: false,
+        message: 'This booking has already been cancelled.',
+      });
+    }
+
+    // D. ⏰ EXPIRATION CHECK: Ensure show has not already passed
+    const show = booking.show;
+    if (show && show.date) {
+      const showDate = new Date(show.date);
+      const now = new Date();
+
+      // If show date is strictly in the past (before today 00:00:00)
+      if (showDate < now.setHours(0, 0, 0, 0)) {
+        return res.status(400).send({
+          success: false,
+          message: 'Cannot cancel tickets for a show that has already expired or ended.',
+        });
+      }
+    }
+
+    // E. 🪑 FREE UP SEATS: Remove booked seats from the Show document
+    if (show) {
+      await Show.findByIdAndUpdate(show._id, {
+        $pull: { bookedSeats: { $in: booking.seats } },
+      });
+    }
+
+    // F. Update Booking Status to CANCELLED
+    booking.status = 'CANCELLED';
+    await booking.save();
+
+    return res.status(200).send({
+      success: true,
+      message: '🎟️ Booking cancelled successfully! Seats are now freed up.',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Error in cancelBooking:', error);
+    return res.status(500).send({
+      success: false,
+      message: error.message || 'Server error while cancelling booking.',
+    });
+  }
+};
+
+module.exports = {
+  makeBooking,
+  getUserBookings,
+  cancelBooking,
 };
