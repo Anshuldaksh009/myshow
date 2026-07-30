@@ -31,7 +31,17 @@ ansulpro@123gmail.com
 user
 
 
-
+  },
+            "theater": {
+                "_id": "6a6a369d03c4df05f86c7a78",
+                "name": "pvr ",
+                "address": "arera",
+                "city": "Bhopal"
+            },
+            "date": "2026-07-30T00:00:00.000Z",
+            "endDate": "2026-07-31T00:00:00.000Z",
+            "time": "01:30 PM (Matinee)",
+            "ticketPrice": 200,
 
 
 

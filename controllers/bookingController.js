@@ -1,81 +1,146 @@
 const Booking = require('../models/bookingModel');
 const Show = require('../models/showModel');
+const redis = require('../config/redis'); // 👈 Import Redis!
 
 // 1. MAKE BOOKING & OCCUPY SEATS (After Payment)
 const makeBooking = async (req, res) => {
+  let acquiredLocks = []; // Keep track of locks so we can clear them later
+  
   try {
-    const { showId, seats, totalAmount, transactionId } = req.body;
-    const userId = req.user?._id || req.body.userId;
+    const showId = req.body.showId || req.body.show;
+    const selectedSeats = req.body.selectedSeats || req.body.seats;
+    const { totalAmount, transactionId } = req.body;
 
-    if (!showId || !seats || seats.length === 0) {
-      return res.status(400).send({
+    // 🎯 Use req.user.id attached by your auth middleware
+    const userId = req.user?.id || req.user?._id || req.body.userId;
+
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: 'Show ID and selected seats are required.',
+        message: "User ID not found. Please log in again."
+      });
+    }
+    
+    if (!showId || !selectedSeats || selectedSeats.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Show ID and selected seats are required."
       });
     }
 
+    // ==========================================
+    // 🛡️ STEP 1: REDIS ATOMIC LOCKING
+    // ==========================================
+    
+    // Create unique lock keys for these exact seats (e.g. "lock:show_123:seat_A1")
+    const lockKeys = selectedSeats.map(seat => `lock:show_${showId}:seat_${seat}`);
+
+    for (const key of lockKeys) {
+      // SET NX = Set if Not eXists, EX 60 = Expire in 60 seconds
+      // This is an ATOMIC operation. Only 1 user can succeed at the exact same millisecond.
+      const lockAcquired = await redis.set(key, userId, 'NX', 'EX', 60);
+      
+      if (lockAcquired) {
+        acquiredLocks.push(key);
+      } else {
+        // 🚨 RACE CONDITION AVERTED! 
+        // Someone else is booking this seat right now. 
+        // Release the locks we *did* manage to get, then tell the user.
+        if (acquiredLocks.length > 0) {
+          await redis.del(acquiredLocks);
+        }
+        return res.status(409).json({
+          success: false,
+          message: "One or more selected seats are currently being booked by someone else. Please try again."
+        });
+      }
+    }
+
+    // ==========================================
+    // 💾 STEP 2: MONGODB DATABASE OPERATIONS
+    // ==========================================
+
+    // Fetch the specific Show document
     const show = await Show.findById(showId);
     if (!show) {
-      return res.status(404).send({ success: false, message: 'Show not found.' });
+      // 🧹 Cleanup locks before returning!
+      if (acquiredLocks.length > 0) await redis.del(acquiredLocks);
+      return res.status(404).json({ success: false, message: "Showtime not found." });
     }
 
-    // Check if any selected seat is ALREADY booked
-    const alreadyBooked = seats.some((seat) => show.bookedSeats.includes(seat));
+    // Check if any selected seats are already booked for this specific date/show
+    const alreadyBooked = selectedSeats.some(seat => show.bookedSeats.includes(seat));
     if (alreadyBooked) {
-      return res.status(400).send({
+      // 🧹 Cleanup locks before returning!
+      if (acquiredLocks.length > 0) await redis.del(acquiredLocks);
+      return res.status(400).json({
         success: false,
-        message: 'One or more selected seats have already been booked by someone else!',
+        message: "One or more selected seats are already booked. Please choose other seats."
       });
     }
 
-    // Create Booking Record
+    // Create the Booking Record
     const newBooking = new Booking({
-      user: userId,
       show: showId,
-      seats,
+      user: userId, 
+      seats: selectedSeats,
       totalAmount,
-      transactionId: transactionId || `TXN_${Date.now()}`,
+      transactionId
     });
 
     await newBooking.save();
 
-    // Mark seats as booked in Show model
-    show.bookedSeats = [...show.bookedSeats, ...seats];
-    await show.save();
+    // 🎯 LOCK SEATS: Push seats into the Show document's bookedSeats array
+    await Show.findByIdAndUpdate(showId, {
+      $push: { bookedSeats: { $each: selectedSeats } }
+    });
 
-    return res.status(200).send({
+    // ==========================================
+    // 🧹 STEP 3: CLEANUP & SUCCESS
+    // ==========================================
+    // The seats are safely in MongoDB, so we can delete the temporary Redis locks!
+    if (acquiredLocks.length > 0) {
+      await redis.del(acquiredLocks);
+    }
+
+    return res.status(201).json({
       success: true,
-      message: 'Booking successful!',
-      data: newBooking,
+      message: "Booking confirmed!",
+      data: newBooking
     });
+
   } catch (error) {
-    console.error('Error in makeBooking:', error);
-    return res.status(500).send({
-      success: false,
-      message: error.message || 'Server error processing booking.',
-    });
+    // 🚨 If the server crashes during this process, RELEASE THE LOCKS!
+    if (acquiredLocks.length > 0) {
+      await redis.del(acquiredLocks);
+    }
+    console.error("Booking Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // 2. GET BOOKINGS FOR LOGGED-IN USER
 const getUserBookings = async (req, res) => {
   try {
-    const userId = req.user?._id || req.params.userId;
+    const userId = req.user?.id || req.user?._id;
 
+    // 🎯 Populate show -> movie and show -> theater
     const bookings = await Booking.find({ user: userId })
       .populate({
         path: 'show',
-        populate: ['movie', 'theater'],
+        populate: [
+          { path: 'movie', select: 'title posterUrl duration' },
+          { path: 'theater', select: 'name city address' }
+        ]
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 }); // Most recent first
 
-    return res.status(200).send({
+    return res.status(200).json({
       success: true,
-      data: bookings,
+      data: bookings
     });
   } catch (error) {
-    console.error('Error in getUserBookings:', error);
-    return res.status(500).send({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -101,7 +166,7 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // B. Check Ownership (Optional Safety Check)
+    // B. Check Ownership
     if (userId && booking.user.toString() !== userId.toString()) {
       return res.status(403).send({
         success: false,
@@ -123,7 +188,6 @@ const cancelBooking = async (req, res) => {
       const showDate = new Date(show.date);
       const now = new Date();
 
-      // If show date is strictly in the past (before today 00:00:00)
       if (showDate < now.setHours(0, 0, 0, 0)) {
         return res.status(400).send({
           success: false,

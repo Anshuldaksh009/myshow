@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 const express = require("express");
 const app = express();
-
+const paymentRoutes = require('./routes/paymentRoutes.js/index.js');
 const mongoose = require('mongoose');
 const listing = require('./models/testingModel.js')
 const Movies = require("./models/movieModel.js")
@@ -59,6 +59,7 @@ app.use(morgan('dev'));
 
 // Base path for all authentication requests
 app.use('/listing/users', userRoutes);
+app.use('/listing/payment',paymentRoutes);
 app.use('/listing/movies', movieRoutes);
 app.use('/listing/booking',bookingRoutes)
 app.use('/listing/shows',showRoutes)
