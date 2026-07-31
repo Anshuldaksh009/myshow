@@ -120,17 +120,24 @@ const makeBooking = async (req, res) => {
 };
 
 // 2. GET BOOKINGS FOR LOGGED-IN USER
+// 2. GET BOOKINGS FOR LOGGED-IN USER
 const getUserBookings = async (req, res) => {
   try {
-    let userId;
-    if (req.user && req.user._id) userId = req.user._id.toString();
-    else if (req.user && req.user.id) userId = req.user.id.toString();
-    else if (req.userId) userId = req.userId.toString();
+    // 🎯 1. Grab the ID from the URL parameter first!
+    let userId = req.params.userId;
 
-    if (!userId) {
+    // Fallback: If URL parameter is missing, check the auth token
+    if (!userId || userId === 'undefined') {
+      if (req.user && req.user._id) userId = req.user._id.toString();
+      else if (req.user && req.user.id) userId = req.user.id.toString();
+      else if (req.userId) userId = req.userId.toString();
+    }
+
+    if (!userId || userId === 'undefined') {
       return res.status(401).json({ success: false, message: "Auth Error: User ID not found." });
     }
-    // 🎯 Populate show -> movie and show -> theater
+
+    // 🎯 2. Populate show -> movie and show -> theater
     const bookings = await Booking.find({ user: userId })
       .populate({
         path: 'show',
@@ -149,7 +156,6 @@ const getUserBookings = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 // 3. CANCEL BOOKING & FREE UP SEATS (With Expiration Check)
 const cancelBooking = async (req, res) => {
   try {
