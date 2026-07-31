@@ -1,6 +1,6 @@
 const express = require('express');
 const { createOrder, cancelLock } = require('../controllers/paymentController');
-const authMiddleware = require('../middleware/authMiddleware'); // make sure you have your auth middleware
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
