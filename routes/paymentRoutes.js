@@ -1,9 +1,11 @@
 const express = require('express');
-const router = express.Router();
-const { createOrder } = require('../controllers/paymentController.js');
-const authMiddleware = require('../middlewares/authMiddleware.js');
+const { createOrder, cancelLock } = require('../controllers/paymentController');
+const authMiddleware = require('../middleware/authMiddleware'); // make sure you have your auth middleware
 
-// We protect this route so only logged-in users can create an order
-router.post('/create-order', authMiddleware, createOrder);
+const router = express.Router();
+
+// Notice we pass authMiddleware so req.user._id exists!
+router.post('/create-order', authMiddleware, createOrder); 
+router.post('/cancel-lock', authMiddleware, cancelLock);
 
 module.exports = router;
