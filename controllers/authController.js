@@ -14,7 +14,8 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
+  },connectionTimeout: 10000, // Fail after 10 seconds instead of hanging
+  socketTimeout: 10000,
 });
 
 // ==========================================
