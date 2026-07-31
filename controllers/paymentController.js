@@ -11,8 +11,19 @@ const createOrder = async (req, res) => {
   try {
     // We now request showId and seats from the frontend to lock them
     const { amount, showId, seats } = req.body; 
-    const userId = req.user._id.toString();
+// Smartly find the user ID regardless of how the auth middleware formats it
+let userId;
+if (req.user && req.user._id) userId = req.user._id.toString();
+else if (req.user && req.user.id) userId = req.user.id.toString();
+else if (req.userId) userId = req.userId.toString();
+else if (req.body.userId) userId = req.body.userId.toString();
 
+if (!userId) {
+  return res.status(401).json({ 
+    success: false, 
+    message: "Auth Error: Backend could not find your User ID." 
+  });
+}
     // 1. Array to track seats we successfully locked, in case we need to rollback
     const lockedSeats = [];
 
