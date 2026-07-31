@@ -1,28 +1,17 @@
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // 👈 Make sure dotenv is required so process.env variables load
-// --- REGISTER CONTROLLER ---
-// At the top of your authController.js, add these imports:
+require('dotenv').config(); 
+
 const OTP = require('../models/otpModel');
-const nodemailer = require('nodemailer');
-//const bcrypt = require('bcryptjs'); // ensure bcrypt is imported
+const { Resend } = require('resend'); // 👈 Using Resend API (Render-friendly, bypasses SMTP blocks)
 
-// Configure Nodemailer Transporter using your .env credentials
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },connectionTimeout: 10000, // Fail after 10 seconds instead of hanging
-  socketTimeout: 10000,
-});
+// Initialize Resend with your API key from environment variables
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ==========================================
-// YOUR EXISTING CONTROLLER FUNCTIONS 
-// (register, login, etc.) STAY HERE UNCHANGED
+// 1. SEND OTP CONTROLLER
 // ==========================================
-
 exports.sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -48,31 +37,29 @@ exports.sendOtp = async (req, res) => {
       otp: hashedOtp,
     });
 
-   // Inside sendOtp in authController.js:
-const mailOptions = {
-  from: `"myshow" <${process.env.EMAIL_USER}>`, // 👈 MUST match EMAIL_USER
-  to: email, // 👈 The recipient address entered in the form
-  subject: '🔑 Your Verification Code for BookMyShow',
-  html: `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>BookMyShow Email Verification</h2>
-      <p>Your OTP verification code is:</p>
-      <h1 style="color: #dc3545; letter-spacing: 4px;">${generatedOtp}</h1>
-      <p>This code will expire in 5 minutes.</p>
-    </div>
-  `,
-};
+    // Send email via Resend API (Never times out on Render!)
+    const data = await resend.emails.send({
+      from: 'BookMyShow <onboarding@resend.dev>', // Change to your verified domain later if desired
+      to: [email],
+      subject: '🔑 Your Verification Code for BookMyShow',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>BookMyShow Email Verification</h2>
+          <p>Your OTP verification code is:</p>
+          <h1 style="color: #dc3545; letter-spacing: 4px;">${generatedOtp}</h1>
+          <p>This code will expire in 5 minutes.</p>
+        </div>
+      `,
+    });
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+    console.log("✅ Email sent successfully via Resend:", data);
 
     return res.status(200).send({
       success: true,
       message: `OTP sent successfully to ${email}`,
     });
   } catch (error) {
-    // 🔍 THIS CONSOLE LOG WILL SHOW THE EXACT ERR IN YOUR BACKEND TERMINAL
-    console.error('❌ NODEMAILER ERROR DETAILS:', error);
+    console.error('❌ RESEND EMAIL ERROR DETAILS:', error);
 
     return res.status(500).send({
       success: false,
@@ -80,7 +67,10 @@ const mailOptions = {
     });
   }
 };
-// 🆕 2. REGISTER WITH OTP CONTROLLER
+
+// ==========================================
+// 2. REGISTER WITH OTP CONTROLLER
+// ==========================================
 exports.registerWithOtp = async (req, res) => {
   try {
     const { name, email, password, otp, role } = req.body;
@@ -134,28 +124,27 @@ exports.registerWithOtp = async (req, res) => {
   }
 };
 
+// ==========================================
+// 3. STANDARD REGISTER CONTROLLER
+// ==========================================
 exports.register = async (req, res) => {
     try {
-        const { name, email, password ,role} = req.body;
+        const { name, email, password, role } = req.body;
 
         console.log(req.body);
         
-        // 1. THE CRITICAL CHECK: Does this email already exist?
         const userExists = await User.findOne({ email });
         
         if (userExists) {
-            // If the user is already in the database, we stop here!
             return res.status(400).send({ 
                 success: false, 
                 message: "This email is already registered. Please sign in instead." 
             });
         }
 
-        // 2. If it's a new user, hash the password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // 3. Create the user with the hidden password
         const newUser = new User({
             name,
             email,
@@ -175,41 +164,42 @@ exports.register = async (req, res) => {
     }
 };
 
-// --- LOGIN CONTROLLER ---
+// ==========================================
+// 4. LOGIN CONTROLLER
+// ==========================================
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Check if the user exists
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).send({ success: false, message: "User not found. Please register first." });
         }
 
-        // 2. Check if the password is correct
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).send({ success: false, message: "Invalid email or password." });
         }
 
-        // 3. Generate JWT Token (Their digital ID card)
         const token = jwt.sign(
             { userId: user._id, role: user.role },
-           process.env.JWT_SECRET, // Keep this safe in your .env file later
-            { expiresIn: '1d' } // Token expires in 1 day
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
         );
-console.log( "authController working");
-return res.status(200).send({
-      success: true,
-      message: 'Login successful',
-      data: token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
+
+        console.log("authController working");
+        
+        return res.status(200).send({
+            success: true,
+            message: 'Login successful',
+            data: token,
+            user: {
+              _id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role
+            }
+        });
     } catch (error) {
         res.status(500).send({ success: false, message: error.message });
     }
