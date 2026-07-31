@@ -11,8 +11,8 @@ const makeBooking = async (req, res) => {
     const selectedSeats = req.body.selectedSeats || req.body.seats;
     const { totalAmount, transactionId } = req.body;
 
-    // 🎯 Use req.user.id attached by your auth middleware
-    const userId = req.user?.id || req.user?._id || req.body.userId;
+    // 🎯 THE ONLY CHANGE: Safely grab userId from all possible places our new middleware might put it
+    const userId = req.userId || req.user?.userId || req.user?._id || req.user?.id || req.body?.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -118,7 +118,6 @@ const makeBooking = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 // 2. GET BOOKINGS FOR LOGGED-IN USER
 // 2. GET BOOKINGS FOR LOGGED-IN USER
 const getUserBookings = async (req, res) => {
