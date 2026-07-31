@@ -122,8 +122,14 @@ const makeBooking = async (req, res) => {
 // 2. GET BOOKINGS FOR LOGGED-IN USER
 const getUserBookings = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    let userId;
+    if (req.user && req.user._id) userId = req.user._id.toString();
+    else if (req.user && req.user.id) userId = req.user.id.toString();
+    else if (req.userId) userId = req.userId.toString();
 
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Auth Error: User ID not found." });
+    }
     // 🎯 Populate show -> movie and show -> theater
     const bookings = await Booking.find({ user: userId })
       .populate({
