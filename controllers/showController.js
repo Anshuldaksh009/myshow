@@ -30,7 +30,7 @@ const addShow = async (req, res) => {
 
     let seatsCount = totalSeats;
     if (!seatsCount) {
-      const theaterDoc = await Theater.findById(theater);
+      const theaterDoc = await Theater.findById(theater).lean();
       seatsCount = theaterDoc?.totalSeats || 80;
     }
 
@@ -48,7 +48,7 @@ const addShow = async (req, res) => {
           time,
           ticketPrice: Number(ticketPrice),
           totalSeats: seatsCount,
-          bookedSeats: [],                       // Fresh seat array for this day
+          bookedSeats: [],                        // Fresh seat array for this day
           isActive: true
         });
       }
@@ -76,7 +76,7 @@ const addShow = async (req, res) => {
   }
 };
 
-// 2. GET SHOWS BY CITY & MOVIE
+// 2. GET SHOWS BY CITY & MOVIE (Optimized with Database-level City Filtering & .lean())
 const getShowsByCityAndMovie = async (req, res) => {
   try {
     const { movie, city, date } = req.query;
@@ -85,7 +85,23 @@ const getShowsByCityAndMovie = async (req, res) => {
       return res.status(400).send({ success: false, message: 'Movie ID and City are required.' });
     }
 
-    let filter = { movie: movie, isActive: { $ne: false } };
+    // 1. Find matching theaters in the given city first to utilize database indexes efficiently
+    const matchingTheaters = await Theater.find({
+      city: { $regex: new RegExp(`^${city.trim()}$`, 'i') },
+      isActive: true
+    }).select('_id').lean();
+
+    const theaterIds = matchingTheaters.map(t => t._id);
+
+    if (theaterIds.length === 0) {
+      return res.status(200).send({ success: true, count: 0, data: [] });
+    }
+
+    let filter = { 
+      movie: movie, 
+      theater: { $in: theaterIds },
+      isActive: { $ne: false } 
+    };
 
     if (date && date !== 'undefined' && date !== 'null') {
       const targetDate = new Date(date);
@@ -96,7 +112,6 @@ const getShowsByCityAndMovie = async (req, res) => {
         const endOfDay = new Date(date);
         endOfDay.setUTCHours(23, 59, 59, 999);
 
-        // 🎯 FIX: Removed the $or array. It now strictly looks for shows matching THIS EXACT day.
         filter.date = { $gte: startOfDay, $lte: endOfDay };
       }
     } else {
@@ -105,20 +120,17 @@ const getShowsByCityAndMovie = async (req, res) => {
       filter.date = { $gte: today };
     }
 
+    // 2. Query shows using optimized indexes and .lean()
     const shows = await Show.find(filter)
       .populate('movie')
       .populate('theater')
-      .sort({ date: 1, time: 1 });
-
-    const filteredShows = shows.filter((show) => {
-      if (!show.theater || !show.theater.city) return false;
-      return show.theater.city.trim().toLowerCase() === city.trim().toLowerCase();
-    });
+      .sort({ date: 1, time: 1 })
+      .lean(); // 👈 Blazing fast performance optimization
 
     return res.status(200).send({
       success: true,
-      count: filteredShows.length,
-      data: filteredShows,
+      count: shows.length,
+      data: shows,
     });
   } catch (error) {
     console.error('Error in getShowsByCityAndMovie:', error);
@@ -126,7 +138,7 @@ const getShowsByCityAndMovie = async (req, res) => {
   }
 };
 
-// 3. GET ALL SHOWS FOR ADMIN
+// 3. GET ALL SHOWS FOR ADMIN (Optimized with .lean())
 const getAllShows = async (req, res) => {
   try {
     const startOfToday = new Date();
@@ -140,8 +152,9 @@ const getAllShows = async (req, res) => {
       ]
     })
     .populate('movie', 'title posterUrl language') 
-    .populate('theater', 'name city address')      
-    .sort({ date: 1, time: 1 });                  
+    .populate('theater', 'name city address')       
+    .sort({ date: 1, time: 1 })                
+    .lean(); // 👈 Skips Mongoose document hydration
 
     return res.status(200).json({
       success: true,
@@ -177,7 +190,7 @@ const deleteShow = async (req, res) => {
   }
 };
 
-// 5. GET SHOW BY ID
+// 5. GET SHOW BY ID (Optimized with .lean())
 const getShowById = async (req, res) => {
   try {
     const reqId = req.params.id;
@@ -185,7 +198,10 @@ const getShowById = async (req, res) => {
       return res.status(400).send({ success: false, message: "Show ID is required" });
     }
 
-    const show = await Show.findById(reqId).populate("movie").populate("theater");
+    const show = await Show.findById(reqId)
+      .populate("movie")
+      .populate("theater")
+      .lean(); // 👈 High performance read operation
 
     if (!show) {
       return res.status(404).send({ success: false, message: "Show not found" });

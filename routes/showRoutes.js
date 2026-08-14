@@ -12,8 +12,8 @@ console.log('i am getting requests');
 
 const { addShow, deleteShow, getAllShows, getShowById, getShowsByCityAndMovie } = require('../controllers/showController');
 
-router.post('/add-show', addShow);
-router.delete('/delete-show/:id', deleteShow);
+router.post('/add-show', authMiddleware, adminMiddleware, addShow);
+router.delete('/delete-show/:id',  authMiddleware, adminMiddleware,deleteShow);
 router.get('/get-all-shows', getAllShows);
 
 // 👈 Route for movie/city show filtering
